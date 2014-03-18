@@ -72,15 +72,21 @@ som_read_data <- function(filename=file.choose(), sep="\t", colsToSkip=NULL, has
       D <- D[, newOrder]
     }
   }
+  # Convert data columns to numeric, in case they are not
+  # Otherwise scale() gets agitated. 
+  if(hasLabels == T)
+    colct <- dim(D)[2]-1 # last column is label
+  else
+    colct <- dim(D)[2]
+  for (i in seq(1,colct))
+    D[,i] <- as.numeric( D[,i] )
   # Remove columns if needed
   # This is risky, can change the labelCol and dataCol accuracy!!
   if (!is.null(colsToSkip))
     D <- D[ -rowsToSkip ] # drop the first 3 columns
   # Scale data
-  D <- data.frame( scale(D[, dataCols]), D[, labelCol] )
-  names(D)[labelCol] <- labelColName # combbining data frames squashes the labelcol name
-  # Kohonen SOM expects a data.matrix
-  return(data.matrix(D))
+  D[, dataCols] <- scale(D[, dataCols])
+  return(D)
 }
 
 #
@@ -91,8 +97,8 @@ som_train <- function( D, grid=sgrid <- somgrid(10, 10, 'hexagonal'), hasLabels=
   if (hasLabels == F)
     dataCols <- 1:dim(D)[2]
   else
-    dataCols <- 1:dim(D)[2]-1 # read data makes sure the last one is the label
-  return(S <- get_best_som(D[,dataCols], n=10))
+    dataCols <- 1:dim(D)[2]-1 # som_read_data makes sure the last one is the label, if there is one.
+  return(get_best_som( data.matrix(D[,dataCols]), n=10))  # Kohonen SOM expects a data.matrix()
 }
 
 #
