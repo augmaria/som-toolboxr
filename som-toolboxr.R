@@ -45,7 +45,7 @@ get_best_som <- function(D, n=10, g=somgrid(10, 10, 'hexagonal'), initmat=NULL, 
 
 
 #
-# som_read_data: read data from a csv/tsv
+# som_read_data() : read data from a csv/tsv
 # To DO: data sanity checks
 # Inputs:
 # filename
@@ -90,7 +90,7 @@ som_read_data <- function(filename=file.choose(), sep="\t", colsToSkip=NULL, has
 }
 
 #
-#
+# som_train() : train a number of SOMs from data and pick the best one
 #
 som_train <- function( D, grid=sgrid <- somgrid(10, 10, 'hexagonal'), hasLabels=F )
 {
@@ -102,9 +102,94 @@ som_train <- function( D, grid=sgrid <- somgrid(10, 10, 'hexagonal'), hasLabels=
 }
 
 #
+# som_plot() : Plotting functions
 #
-#
-som_plot <- function(S)
+som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
 {
+  ts <- gsub("[ :]","_",Sys.time())
+  nrows <- dim(D)[1]
+  ncols <- dim(D)[2]
+  # arbitrary point size cex in mapping plot, 
+  # the more data, the smaller the dot
+  cex_val <- 500/nrows
+  # create directory under plotDir using current timestamp
+  if (toFile == T)
+  {
+    plotDir <- paste(plotDir,ts,".plots/", sep="")
+    unlink(plotDir, recursive=T)
+    dir.create(plotDir,recursive=T) # mkdir -r
+  }
+  #
+  # Determine a suitable number of clusters
+  #
+  if (hasLabels == T)
+  {
+    labels <- unique(D[, ncols])
+    lnames <- names(table(labels))
+    lcount <- length(lnames)
+    dimcount <- ncols-1
+    cat("[INFO] From labels, the cluster count is set to ", lcount)
+  }else
+  {
+    lcount <- 5 # arbitrary choice
+    dimcount <- ncols
+    cat("[INFO] Without labels, the cluster count is arbitrarily set to ", lcount)
+  }
+  #
+  # Apply hierarchical clustering to find cluster boundaries
+  #
+  D.hc <- cutree(hclust(dist(S$codes)), lcount)
+  #
+  # Plot changes, (error over time)
+  #
+  if(toFile == T)
+  {
+    fn <- paste(plotDir,"changes.png",sep="")
+    png(fn, )
+    plot(S, type="changes")
+    dev.off()
+  }
+  else
+  {
+    plot(S, type="changes")
+  }
+  #
+  # U-Matrix visualization.
+  #
+  if(toFile == T)
+  {
+    fn <- paste(plotDir,"u-matrix.png",sep="")
+    png(fn, width=1200, height=700)
+    plot(S, type="dist.neighbours", main="U-Matrix")
+    add.cluster.boundaries(S, D.hc)
+    dev.off()
+  }
+  else
+  {
+    plot(S, type="dist.neighbours", main="U-Matrix")
+    add.cluster.boundaries(S, D.hc)
+  }
+  #
+  # Component planes
+  #
+  colname = names(S$codes[1,])
+  for(i in seq(1, dimcount))
+  {
+    if (toFile == T)
+    {
+      fn <- paste(plotDir,colname[i],sep="")
+      png(fn, width=1200, height=700)
+      plot(S, type="property", 
+           property=S$codes[,i], 
+           main=colname[i])
+      dev.off()
+    }
+    else
+    {
+      plot(S, type="property", 
+           property=S$codes[,i], 
+           main=colname[i])
+    }
+  }
   
 }
