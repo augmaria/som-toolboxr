@@ -116,6 +116,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   if (toFile == T)
   {
     plotDir <- paste(plotDir,ts,".plots/", sep="")
+    cat("[INFO] Creating plot directory = ", plotDir,"\n")
     unlink(plotDir, recursive=T)
     dir.create(plotDir,recursive=T) # mkdir -r
   }
@@ -128,12 +129,12 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
     lnames <- names(table(labels))
     lcount <- length(lnames)
     dimcount <- ncols-1
-    cat("[INFO] From labels, the cluster count is set to ", lcount)
+    cat("[INFO] From labels, the cluster count is set to ", lcount,"\n")
   }else
   {
     lcount <- 5 # arbitrary choice
     dimcount <- ncols
-    cat("[INFO] Without labels, the cluster count is arbitrarily set to ", lcount)
+    cat("[INFO] Without labels, the cluster count is arbitrarily set to ", lcount,"\n")
   }
   #
   # Apply hierarchical clustering to find cluster boundaries
@@ -142,6 +143,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   #
   # Plot changes, (error over time)
   #
+  cat("[INFO] Plotting training error over iterations.\n")
   if(toFile == T)
   {
     fn <- paste(plotDir,"changes.png",sep="")
@@ -156,6 +158,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   #
   # U-Matrix visualization.
   #
+  cat("[INFO] Plotting the u-matrix.\n")
   if(toFile == T)
   {
     fn <- paste(plotDir,"u-matrix.png",sep="")
@@ -172,9 +175,11 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   #
   # Component planes
   #
+  cat("[INFO] Plotting the component planes: ")
   colname = names(S$codes[1,])
   for(i in seq(1, dimcount))
   {
+    cat(colname[i], " ")
     if (toFile == T)
     {
       fn <- paste(plotDir,colname[i],sep="")
@@ -191,5 +196,66 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
            main=colname[i])
     }
   }
+  cat("\n")
+  #
+  # Hit histograms
+  #
+  cat("[INFO] Plotting the hit histogram.\n")
+  D.hits <- compute_hit_counts(S, D)
+  if(toFile == T)
+  {
+    fn <- paste(plot_dir,"hit-histogram.png",sep="")
+    png(fn, width=1200, height=700)
+    plot(S, type="property", 
+         property=D.hits,  main="Hit histogram for training data", 
+         palette.name=coolWhiteHotRed)
+    dev.off()
+  }
+  else
+  {
+    plot(S, type="property", 
+         property=D.hits,  main="Hit histogram for training data", 
+         palette.name=coolWhiteHotRed)
+  }
   
+}
+
+
+#
+# Function for computing hit histograms 
+# converts (data_row, neuron) to (neuron, hit_count)
+#
+compute_hit_counts <- function(S, D)
+{
+  hits <- map(S, data.matrix(D))
+  hit_count <- rep(0, dim(S$codes)[1])
+  for(i in seq(1,length(hits$unit.classif)))
+  {
+    hit_count[hits$unit.classif[i]] <- hit_count[hits$unit.classif[i]] + 1
+  }
+  return(hit_count)
+}
+
+#
+# Palette function
+# Hacked this to show hit histograms. The important
+# issue is 0 hits gets mapped to white, producing a
+# cleaner hit histogram.
+#
+coolWhiteHotRed <- function(n, alpha = 1) {
+  # rev reverses the color palette
+  #rev(heat_hcl(n, c = c(100, 0), l = c(30, 90), power = c(1/5, 2)))
+  rev(heat_hcl(n, c = c(250, 0), l = c(30, 100), power = c(1/5, 2)))
+}
+
+#
+# A viewer function for palette hacking.
+# Use: pal(coolWhiteHotRed(10))
+#
+pal <- function(col, border = "light gray", ...)
+{
+  n <- length(col)
+  plot(0, 0, type="n", xlim = c(0, 1), ylim = c(0, 1),
+       axes = FALSE, xlab = "", ylab = "", ...)
+  rect(0:(n-1)/n, 0, 1:n/n, 1, col = col, border = border)
 }
