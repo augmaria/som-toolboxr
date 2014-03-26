@@ -106,6 +106,10 @@ som_train <- function( D, grid=sgrid <- somgrid(10, 10, 'hexagonal'), hasLabels=
 #
 som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
 {
+  # The following line makes sure the legend does not 
+  # appear outside the plotting area.
+  par(xpd=NA,oma=c(3,0,0,0)) 
+  # Compute general purpose variables
   ts <- gsub("[ :]","_",Sys.time())
   nrows <- dim(D)[1]
   ncols <- dim(D)[2]
@@ -224,6 +228,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   {
     labcol <- dim(D)[2]
     bgcols <- rainbow( lcount )
+    # Mapping 1 as scatter plots
     if(toFile == T)
     {
       fn <- paste(plot_dir,"mapping1.png",sep="")
@@ -234,16 +239,44 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
       add.cluster.boundaries(S, D.hc)
       dev.off()
     }
-    else
+    else 
     {
       plot(S, type="mapping", 
            col = bgcols[ D[,labcol] ],
            main = "mapping plot", pch=20, cex=cex_val)
       add.cluster.boundaries(S, D.hc)
     }
-    
+    # Mapping 2: as colored neurons
+    if(toFile == T)
+    {
+      fn <- paste(plot_dir,"mapping2.png",sep="")
+      png(fn, width=1200, height=700)
+      xyfpredictions <- as.integer(predict(
+        S, 
+        trainY=D[,labcol], 
+        trainX=D[,1:dimcount])$unit.predictions)
+      plot(S, type="mapping", 
+           bgcol = bgcols[as.integer(xyfpredictions)], 
+           main = "another mapping plot")
+      add.cluster.boundaries(S, D.hc)
+      # pch 15 is a filled square
+      legend("right", legend=lnames, pch=15, col=bgcols)
+      dev.off()
+    }
+    else
+    {
+      xyfpredictions <- as.integer(predict(S, 
+        trainY=data.matrix(D)[,labcol], 
+        trainX=data.matrix(D)[,1:dimcount])$unit.predictions)
+      plot(S, type="mapping", 
+           bgcol = bgcols[as.integer(xyfpredictions)], 
+           main = "another mapping plot")
+      add.cluster.boundaries(S, D.hc)
+      # pch 15 is a filled square
+      legend("right", legend=lnames, pch=15, col=bgcols)
+    }
   }
-  else
+  else # No labels
   {
     #Print hits without coloring.
     if(toFile == T)
