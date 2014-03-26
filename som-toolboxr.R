@@ -217,6 +217,53 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
          property=D.hits,  main="Hit histogram for training data", 
          palette.name=coolWhiteHotRed)
   }
+  #
+  # Mapping plots. Different behavior based on the presence or absence of labels
+  #
+  if( hasLabels == T  )
+  {
+    labcol <- dim(D)[2]
+    bgcols <- rainbow( lcount )
+    if(toFile == T)
+    {
+      fn <- paste(plot_dir,"mapping1.png",sep="")
+      png(fn, width=1200, height=700)
+      plot(S, type="mapping", 
+           col = bgcols[ D[,labcol] ],
+           main = "mapping plot", pch=20, cex=cex_val)
+      add.cluster.boundaries(S, D.hc)
+      dev.off()
+    }
+    else
+    {
+      plot(S, type="mapping", 
+           col = bgcols[ D[,labcol] ],
+           main = "mapping plot", pch=20, cex=cex_val)
+      add.cluster.boundaries(S, D.hc)
+    }
+    
+  }
+  else
+  {
+    #Print hits without coloring.
+    if(toFile == T)
+    {
+      fn <- paste(plot_dir,"mapping1.png",sep="")
+      png(fn, width=1200, height=700)
+      plot(S, type="mapping", 
+           col = "gray",
+           main = "mapping plot", pch=20, cex=cex_val)
+      add.cluster.boundaries(S, D.hc)
+      dev.off()
+    }
+    else
+    {
+      plot(S, type="mapping", 
+           col = "gray",
+           main = "mapping plot", pch=20, cex=cex_val)
+      add.cluster.boundaries(S, D.hc)
+    }
+  }
   
 }
 
