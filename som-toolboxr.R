@@ -115,7 +115,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   ncols <- dim(D)[2]
   # arbitrary point size cex in mapping plot, 
   # the more data, the smaller the dot
-  cex_val <- 500/nrows
+  cex_val <- 200/nrows
   # create directory under plotDir using current timestamp
   if (toFile == T)
   {
