@@ -86,19 +86,35 @@ som_read_data <- function(filename=file.choose(), sep="\t", colsToSkip=NULL, has
     D <- D[ -rowsToSkip ] # drop the first 3 columns
   # Scale data
   D[, dataCols] <- scale(D[, dataCols])
+  # Need to handle NAs since som() won't work with them
+  # This is naive but will allow the code to continue
+  na_count <- length(D[is.na(D)])
+  if ( na_count > 0 )
+  {
+    cat("[WARN] Dataset contains ", na_count, " NAs. Will replace them with 0s but this can change the dataset characteristics.\n")
+    D[is.na(D)] <- 0
+  }
+  # Remove constant columns
+  # While they are fine for training, they interfere with plotting
+  constant_cols <- names( D[, sapply(D, function(v) var(v, na.rm=TRUE)==0)] )
+  if (length(constant_cols) > 0)
+  {
+    cat("[WARN] The following columns are constant:", constant_cols, ". They will be removed.\n")
+    D <- D[,sapply(D, function(v) var(v, na.rm=TRUE)!=0)]
+  }
   return(D)
 }
 
 #
 # som_train() : train a number of SOMs from data and pick the best one
 #
-som_train <- function( D, grid=sgrid <- somgrid(10, 10, 'hexagonal'), hasLabels=F )
+som_train <- function( D, grid=sgrid <- somgrid(10, 10, 'hexagonal'), hasLabels=F, somCount=10 )
 {
   if (hasLabels == F)
     dataCols <- 1:dim(D)[2]
   else
     dataCols <- 1:dim(D)[2]-1 # som_read_data makes sure the last one is the label, if there is one.
-  return(get_best_som( data.matrix(D[,dataCols]), n=10))  # Kohonen SOM expects a data.matrix()
+  return(get_best_som( data.matrix(D[,dataCols]), n=somCount))  # Kohonen SOM expects a data.matrix()
 }
 
 #
@@ -181,12 +197,12 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   #
   cat("[INFO] Plotting the component planes: ")
   colname = names(S$codes[1,])
-  for(i in seq(1, dimcount))
+  for(i in seq(1, dim(S$codes)[2]))
   {
     cat(colname[i], " ")
     if (toFile == T)
     {
-      fn <- paste(plotDir,colname[i],sep="")
+      fn <- paste(plotDir,colname[i],".png",sep="")
       png(fn, width=1200, height=700)
       plot(S, type="property", 
            property=S$codes[,i], 
@@ -208,7 +224,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   D.hits <- compute_hit_counts(S, D)
   if(toFile == T)
   {
-    fn <- paste(plot_dir,"hit-histogram.png",sep="")
+    fn <- paste(plotDir,"hit-histogram.png",sep="")
     png(fn, width=1200, height=700)
     plot(S, type="property", 
          property=D.hits,  main="Hit histogram for training data", 
@@ -231,7 +247,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
     # Mapping 1 as scatter plots
     if(toFile == T)
     {
-      fn <- paste(plot_dir,"mapping1.png",sep="")
+      fn <- paste(plotDir,"mapping1.png",sep="")
       png(fn, width=1200, height=700)
       plot(S, type="mapping", 
            col = bgcols[ D[,labcol] ],
@@ -249,14 +265,14 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
     # Mapping 2: as colored neurons
     if(toFile == T)
     {
-      fn <- paste(plot_dir,"mapping2.png",sep="")
+      fn <- paste(plotDir,"mapping2.png",sep="")
       png(fn, width=1200, height=700)
       xyfpredictions <- as.integer(predict(
         S, 
-        trainY=D[,labcol], 
-        trainX=D[,1:dimcount])$unit.predictions)
+        trainY=data.matrix(D[,labcol]), 
+        trainX=data.matrix(D[,1:dimcount]))$unit.predictions)
       plot(S, type="mapping", 
-           bgcol = bgcols[as.integer(xyfpredictions)], 
+           bgcol = bgcols[as.integer(xyfpredictions)],
            main = "another mapping plot")
       add.cluster.boundaries(S, D.hc)
       # pch 15 is a filled square
@@ -281,7 +297,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
     #Print hits without coloring.
     if(toFile == T)
     {
-      fn <- paste(plot_dir,"mapping1.png",sep="")
+      fn <- paste(plotDir,"mapping1.png",sep="")
       png(fn, width=1200, height=700)
       plot(S, type="mapping", 
            col = "gray",
