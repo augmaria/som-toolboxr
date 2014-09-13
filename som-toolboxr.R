@@ -8,6 +8,29 @@
 library(kohonen)
 library(colorspace) # Need this for hacking palettes
 
+
+#
+# Ack. I don't like using an array for lookups!
+# TODO: change this to hashtable when I can!
+#
+# Side effects: if the label is not in known label names, it will return 0
+labels_to_bgcols <- function(lnames, labels)
+{
+  labels <- as.character(labels) # otherwise we compare strings to ints
+  labelsn <- rep(0, length(labels))
+  for (i in seq(1, length(labels)))
+  {
+    for (j in seq(1, length(lnames)))
+    {
+      if (lnames[j] == labels[i])
+      {
+        labelsn[i] = j
+      }
+    }
+  }
+  return(labelsn)
+}
+
 #
 # Train N SOMs return the one with best mean avg.deviation from code vects.
 # So that we get the SOM with best mapping, with minimal twists.
@@ -131,7 +154,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   ncols <- dim(D)[2]
   # arbitrary point size cex in mapping plot, 
   # the more data, the smaller the dot
-  cex_val <- 200/nrows
+  cex_val <- 900/nrows
   # create directory under plotDir using current timestamp
   if (toFile == T)
   {
@@ -145,9 +168,11 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   #
   if (hasLabels == T)
   {
-    labels <- unique(D[, ncols])
+    labcol <- ncols
+    labels <- unique(D[, labcol])
     lnames <- names(table(labels))
     lcount <- length(lnames)
+    labels.processed <- labels_to_bgcols(lnames, D[, labcol])
     dimcount <- ncols-1
     cat("[INFO] From labels, the cluster count is set to ", lcount,"\n")
   }else
@@ -242,7 +267,6 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
   #
   if( hasLabels == T  )
   {
-    labcol <- dim(D)[2]
     bgcols <- rainbow( lcount )
     # Mapping 1 as scatter plots
     if(toFile == T)
@@ -250,18 +274,21 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
       fn <- paste(plotDir,"mapping1.png",sep="")
       png(fn, width=1200, height=700)
       plot(S, type="mapping", 
-           col = bgcols[ D[,labcol] ],
+           col = bgcols[ labels.processed ],
            main = "mapping plot", pch=20, cex=cex_val)
-      add.cluster.boundaries(S, D.hc)
+      #add.cluster.boundaries(S, D.hc) # does not produce clear clusters
+      legend("right", legend=lnames, pch=15, col=bgcols)
       dev.off()
     }
     else 
     {
       plot(S, type="mapping", 
-           col = bgcols[ D[,labcol] ],
+           col = bgcols[ labels.processed  ],
            main = "mapping plot", pch=20, cex=cex_val)
-      add.cluster.boundaries(S, D.hc)
+      #add.cluster.boundaries(S, D.hc) # does not produce clear clusters
+      legend("right", legend=lnames, pch=15, col=bgcols)
     }
+    
     # Mapping 2: as colored neurons
     if(toFile == T)
     {
@@ -269,7 +296,7 @@ som_plot <- function(S, D, toFile=F, plotDir="/tmp/", hasLabels=F)
       png(fn, width=1200, height=700)
       xyfpredictions <- as.integer(predict(
         S, 
-        trainY=data.matrix(D[,labcol]), 
+        trainY=data.matrix(as.integer(D[,labcol])), 
         trainX=data.matrix(D[,1:dimcount]))$unit.predictions)
       plot(S, type="mapping", 
            bgcol = bgcols[as.integer(xyfpredictions)],
